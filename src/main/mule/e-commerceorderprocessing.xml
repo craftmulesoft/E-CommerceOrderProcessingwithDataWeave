@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="b67fc92e-345e-481b-ba45-2ec86db026e8" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="ProcessE-CommerceFlow" doc:id="1127a883-5740-4bdb-9c67-e491a941c639" >
+		<http:listener doc:name="Listener" doc:id="e3e7af0c-5593-4014-9c66-1d00dad98767" config-ref="HTTP_Listener_config" path="/process"/>
+		<ee:transform doc:name="Transform Message" doc:id="73f550ae-fa29-461c-afd8-83dbd4159352" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+processedOrders:
+    payload.orders map (o) -> {
+        id: o.orderId,
+        customerName: o.customer,
+        totalAmount: o.amount,
+        orderStatus: o.status
+    },
+
+highValueOrders:
+    payload.orders filter (o) -> o.amount > 100,
+
+cancelledOrder:
+    payload.orders filter (o) -> o.status == "CANCELLED",
+
+ordersByCountry:
+    payload.orders groupBy (o) -> o.country,
+
+metadataTransformed:
+    payload.metadata mapObject (value, key) -> 
+        (upper(key)): value,
+
+metadataFiltered:
+    payload.metadata filterObject (value, key) -> 
+        key != "source"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
